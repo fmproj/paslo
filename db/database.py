@@ -1,6 +1,7 @@
 import datetime
 import os
 import sqlite3
+import bcrypt
 
 def open_db(path) -> sqlite3.Connection:
     conn = sqlite3.connect(path)
@@ -31,12 +32,17 @@ def add_passrec(conn: sqlite3.Connection, url, username, password, notes) -> int
             VALUES (?, ?, ?, ?, ?)
         '''
 
-        cursor.execute(insert_query, (url, username, password, date, notes))
+        cursor.execute(insert_query, (url, username, hash_password(password), date, notes))
         conn.commit()
         return cursor.lastrowid
     except sqlite3.Error as e:
         # TODO: Log the error
-        return None    
+        return None 
+
+def hash_password(password: str):
+    salt = bcrypt.gensalt()
+    hashed_pass = bcrypt.hashpw(password.encode("utf-8"), salt)
+    return hashed_pass
 
 def get_passrec(conn: sqlite3.Connection, url) -> list[any]:
     try:
