@@ -59,6 +59,14 @@ def get_passrec(url) -> list[any]:
         # TODO: Log the error
         return []
 
+def list_passrecs():
+    cursor = CONN.cursor()
+    list_all_query = '''
+        SELECT * FROM password_records
+    '''
+    cursor.execute(list_all_query)
+    return cursor.fetchall()
+
 def update_passrec(url, username=None, password=None, notes=None) -> None:
     try:
         cursor = CONN.cursor()
@@ -92,5 +100,7 @@ if __name__ == "__main__":
     # update_passrec("LOL", username="admin", notes="This is changed LOL note")
     # print(get_passrec("LOL"))
     # delete_password("LOL")
+    # print(add_passrec("WOW", "druid", "Heslo123", "Credentials for WOW account"))
+    # print(list_passrecs())
 
     CONN.close()
