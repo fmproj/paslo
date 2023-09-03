@@ -2,28 +2,38 @@ import datetime
 import os
 import sqlite3
 import bcrypt
+import log
+
+logger = log.getLogger(__name__)
 
 def open_db(path) -> sqlite3.Connection:
-    conn = sqlite3.connect(path)
-    return conn
+    try:
+        conn = sqlite3.connect(path)
+        return conn
+    except sqlite3.Error as e:
+        logger.error("Unable to open database at " + path)
+        return None
 
-CONN = open_db(os.path.join(os.path.dirname(os.path.abspath(__file__)), "paslo.db"))
+CONN = open_db(os.path.join(os.path.dirname(os.path.abspath(__file__)), "error\paslo.db"))
 
 def create_passrecs_table() -> None:
-    create_passrecs_query = '''
-        CREATE TABLE IF NOT EXISTS password_records (
-            id INTEGER PRIMARY KEY,
-            url TEXT NOT NULL UNIQUE,
-            username TEXT,
-            password TEXT NOT NULL,
-            updated DATETIME NOT NULL,
-            notes TEXT
-        )
-    '''
+    try:
+        create_passrecs_query = '''
+            CREATE TABLE IF NOT EXISTS password_records (
+                id INTEGER PRIMARY KEY,
+                url TEXT NOT NULL UNIQUE,
+                username TEXT,
+                password TEXT NOT NULL,
+                updated DATETIME NOT NULL,
+                notes TEXT
+            )
+        '''
 
-    cursor = CONN.cursor()
-    cursor.execute(create_passrecs_query)
-    CONN.commit()
+        cursor = CONN.cursor()
+        cursor.execute(create_passrecs_query)
+        CONN.commit()
+    except sqlite3.Error as e:
+        logger.error("Unable to create password_records table")
 
 create_passrecs_table()
 
@@ -40,7 +50,7 @@ def add_passrec(url, username, password, notes) -> int:
         CONN.commit()
         return cursor.lastrowid
     except sqlite3.Error as e:
-        # TODO: Log the error
+        logger.warning("Couldn't proceed INSERT query")
         return None 
 
 def hash_password(password: str):
@@ -56,16 +66,20 @@ def get_passrec(url) -> list[any]:
         cursor.execute(get_query, (url,))
         return cursor.fetchall()
     except sqlite3.Error as e:
-        # TODO: Log the error
+        logger.warning("Couldn't proceed SELECT record query")
         return []
 
 def list_passrecs():
-    cursor = CONN.cursor()
-    list_all_query = '''
-        SELECT * FROM password_records
-    '''
-    cursor.execute(list_all_query)
-    return cursor.fetchall()
+    try:
+        cursor = CONN.cursor()
+        list_all_query = '''
+            SELECT * FROM password_records
+        '''
+        cursor.execute(list_all_query)
+        return cursor.fetchall()
+    except sqlite3.Error as e:
+        logger.warning("Could't proceed Select * query")
+        return []
 
 def update_passrec(url, username=None, password=None, notes=None) -> None:
     try:
@@ -80,7 +94,7 @@ def update_passrec(url, username=None, password=None, notes=None) -> None:
         cursor.execute(update_query, (username, password, date, notes, url))
         CONN.commit()
     except sqlite3.Error as e:
-        # TODO: Log the error
+        logger.warning("Couldn't proceed UPDATE query")
         pass
 
 def delete_password(url) -> None:
@@ -91,16 +105,16 @@ def delete_password(url) -> None:
         cursor.execute(delete_query, (url,))
         CONN.commit()
     except sqlite3.Error as e:
-        # TODO: Log the error
+        logger.warning("Couldn't proceed DELETE query")
         pass
 
-if __name__ == "__main__": 
-    # print(add_passrec("LOL", "user", "heslo", "Login for LOL game"))
-    # print(get_passrec("LOL"))
-    # update_passrec("LOL", username="admin", notes="This is changed LOL note")
-    # print(get_passrec("LOL"))
-    # delete_password("LOL")
-    # print(add_passrec("WOW", "druid", "Heslo123", "Credentials for WOW account"))
-    # print(list_passrecs())
+if __name__ == "__main__":
+    print(add_passrec("LOL", "user", "heslo", "Login for LOL game"))
+    print(get_passrec("LOL"))
+    update_passrec("LOL", username="admin", notes="This is changed LOL note")
+    print(get_passrec("LOL"))
+    delete_password("LOL")
+    print(add_passrec("WOW", "druid", "Heslo123", "Credentials for WOW account"))
+    print(list_passrecs())
 
     CONN.close()
